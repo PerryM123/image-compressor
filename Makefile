@@ -9,3 +9,9 @@ up-with-build:
 
 down:
 	docker-compose down
+
+log:
+	tail -f app/src/app.log
+
+air:
+	docker compose exec app air -c .air.toml
