@@ -1,5 +1,11 @@
 # image-compressor-microservice
 
+# TODO
+- [x] Add Air to rebuild project after saving
+- [ ] Learn how to serve the image back to the user to be saved (〇〇-compressed.jpg)
+- [ ] Setup env file
+- [ ] Setup Bearer token
+
 ## なぜ作ってるか
 
 TODO
