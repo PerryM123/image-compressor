@@ -6,6 +6,7 @@
 /app/.env
 /app/.devdbrc
 /app/.env.backup
+/app/tmp
 /.phpunit.result.cache
 /docker-compose.override.yml
 /Homestead.json
