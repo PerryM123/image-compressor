@@ -6,8 +6,10 @@ services:
     volumes:
       - ./app:/app
     working_dir: /app
+    image: cosmtrek/air
     ports:
-      - "8080:8080"
+      - 8080:8080
+    command: sh -c "air"
 volumes:
   mysql-volume:
   minio_data:

@@ -4,9 +4,15 @@ WORKDIR /app
 
 RUN apk add --no-cache bash curl git imagemagick
 
+# live reloading
 RUN go install github.com/air-verse/air@latest
 
-# Use modules
-ENV GO111MODULE=on
+COPY app/go.mod ./
 
-CMD ["sh", "-c", "go run ./main.go"]
+RUN go mod download
+
+COPY app/ .
+
+RUN go build -o main
+
+CMD ["air"]
