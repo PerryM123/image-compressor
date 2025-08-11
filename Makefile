@@ -13,5 +13,8 @@ down:
 log:
 	tail -f app/src/app.log
 
-air:
+air-docker:
 	docker compose exec app air -c .air.toml
+
+air-local:
+	cd app && air -c .air.toml
