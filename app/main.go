@@ -34,14 +34,14 @@ func compressHandler(w http.ResponseWriter, r *http.Request) {
         "service": "image-compressor",
         "status":  "ok",
         "version": "1.0.0",
-        "hi": "test meaaa",
+        "hi": "test measssaa",
     }
     json.NewEncoder(w).Encode(status)
 }
 
 func main() {
     http.HandleFunc("/compress", compressHandler)
-    err := http.ListenAndServe(":8081", nil)
+    err := http.ListenAndServe(":8080", nil)
     if err != nil {
         log.Fatalf("Server failed to start: %v", err)
     }
