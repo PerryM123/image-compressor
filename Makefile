@@ -16,5 +16,6 @@ log:
 air-docker:
 	docker compose exec app air -c .air.toml
 
+# airの導入方法: https://github.com/air-verse/air?tab=readme-ov-file#installation
 air-local:
 	cd app && air -c .air.toml
