@@ -1,3 +1,6 @@
+setup-local-env-files:
+	cp -R ./app/.env.example ./app/.env
+	
 app-bash:
 	docker compose exec app bash
 

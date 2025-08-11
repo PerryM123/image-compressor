@@ -17,6 +17,7 @@
 $ cd ~/workspace
 $ git clone git@github.com:PerryM123/image-compressor.git
 $ cd image-compressor
+$ make setup-local-env-files
 # コンテナのビルドです. もし既にビルドを実行されたら $ make up-with-build で再ビルドできます
 $ make up
 # dockerでローカルを起動
