@@ -1,23 +1,23 @@
-## Notes
+# Notes
 - [ ] `go install 〇〇` installs a binary to be used globally (?)
 - [ ] `go get 〇〇` installs a dependency and adds it to `go.mod`
-### Things to learn:
 
-#### defer
+## Things to learn:
+
+### defer
 runs code even if there is a sudden return so this is great for ensuring cleanup even if an exception or error occurs
 
-#### mutex (mu.Lock() or mu.Unlock())
+### mutex (mu.Lock() or mu.Unlock())
 TODO
 
-#### channels
+### channels
 TODO
 
-
-#### const PascalCase vs const pascalCase
+### const PascalCase vs const pascalCase
 - PascalCase means, it is a constant variable that can be exported to another file
 - pascalCase means it is a constant variable that cannot be exported to another file
 
-#### Declaring a variable
+### Declaring a variable
 ```go
 f := "apple" // shorthand for declares NEW variables
 ```
@@ -25,3 +25,9 @@ f := "apple" // shorthand for declares NEW variables
 ```go
 var f string = "apple" // longhand for declares NEW variables
 ```
+
+## Questions
+
+### Preventing Timing Attacks
+
+Instead of using string comparison for tokens, passwords, etc, have you ever used `subtle.ConstantTimeCompare()`  to make your response times constant so that you can prevent timing attacks where an attacker could guess the token by measuring response times?
