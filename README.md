@@ -8,6 +8,23 @@
 
 僕は主にフロントエンドの開発をやってますがフロントエンド以外の開発も面白くてGo言語で楽しく実装したいです！
 
+## ローカル環境構築
+
+> [!WARNING]
+> Docker Desktop は導入必須です。導入後Docker Desktopを開いてください
+
+```sh
+$ cd ~/workspace
+$ git clone git@github.com:PerryM123/image-compressor.git
+$ cd image-compressor
+# コンテナのビルドです. もし既にビルドを実行されたら $ make up-with-build で再ビルドできます
+$ make up
+# dockerでローカルを起動
+$ make air-docker
+# ホストパソコン内でローカルを起動したい場合 ( airの導入方法: https://github.com/air-verse/air?tab=readme-ov-file#installation )
+$ make air-local
+```
+
 ## 簡単なBFFアーキテクチャ設計
 
 ![alt text](/docs/images/open-ai-project-ver3.jpg)
