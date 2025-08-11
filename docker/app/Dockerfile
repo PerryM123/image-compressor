@@ -2,7 +2,14 @@ FROM golang:1.24-alpine
 
 WORKDIR /app
 
-RUN apk add --no-cache bash curl git imagemagick
+RUN apk add --no-cache \
+    bash \
+    curl \
+    git \
+    imagemagick \
+    imagemagick-jpeg \
+    imagemagick-dev \
+    imagemagick-libs
 
 # live reloading
 RUN go install github.com/air-verse/air@latest
