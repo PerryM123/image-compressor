@@ -2,9 +2,9 @@
 
 # TODO
 - [x] Add Air to rebuild project after saving
-- [ ] Learn how to serve the image back to the user to be saved (〇〇-compressed.jpg)
-- [ ] Setup env file
-- [ ] Setup Bearer token
+- [x] Learn how to serve the image back to the user to be saved (〇〇-compressed.jpg)
+- [x] Setup env file
+- [x] Setup Bearer token
 
 ## なぜ作ってるか
 
