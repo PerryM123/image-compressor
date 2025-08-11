@@ -8,6 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
+
+	"github.com/joho/godotenv"
 )
 
 const maxFileSizeForUploadImage int64 = 10 * 1024 * 1024 // 10 MB
@@ -21,8 +24,22 @@ const (
 	SignificantCompression CompressionQuality = 60
 	ExtremeCompression CompressionQuality = 10
 )
-func compressHandler(w http.ResponseWriter, r *http.Request) {
-    log.Println("perry: compressHandler")
+func compressImageHandler(w http.ResponseWriter, r *http.Request) {
+    log.Println("compressImageHandler")
+    authHeader := r.Header.Get("Authorization")
+    token := strings.TrimPrefix(authHeader, "Bearer ")
+    if authHeader == "" {
+        http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+        return
+    }
+    if !strings.HasPrefix(authHeader, "Bearer ") {
+        http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+        return
+    }
+    if token != os.Getenv("API_BEARER_TOKEN") {
+        http.Error(w, "Invalid Token Authorization", http.StatusUnauthorized)
+        return 
+    }
 	if r.Method != http.MethodPost {
         // TODO: 成功と失敗の時にJSONを返却するように修正
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
@@ -90,8 +107,16 @@ func compressHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func loadEnvFile() {
+    err := godotenv.Load(".env")
+    if err != nil {
+        log.Fatal("Error loading .env file")
+    }
+}
+
 func main() {
-	http.HandleFunc("/compress", compressHandler)
+    loadEnvFile()
+	http.HandleFunc("/compress", compressImageHandler)
 	// tmpディレクトリ存在を確認
 	os.MkdirAll("./tmp", os.ModePerm)
 	log.Println("Server starting on :8080")
