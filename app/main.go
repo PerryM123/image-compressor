@@ -36,6 +36,10 @@ type CompressResponse struct {
     CompressedSize int64  `json:"compressedSize"`
 }
 
+type HealthCheckResponse struct {
+    Alive        bool `json:"alive"`
+}
+
 func handleErrorResponse(w http.ResponseWriter, response *CompressResponse, message string, statusCode int) {
     response.Message = message
     log.Println(message)
@@ -100,9 +104,13 @@ func compressImageHandler(w http.ResponseWriter, r *http.Request) {
     response.Message = "Image compressed successfully"
 }
 func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
-    w.WriteHeader(http.StatusOK)
     w.Header().Set("Content-Type", "application/json")
-    io.WriteString(w, `{"alive": true}`)
+    w.WriteHeader(http.StatusOK)
+    response := HealthCheckResponse{}
+    response.Alive = true
+    defer func() {
+        json.NewEncoder(w).Encode(response)
+    }()
 }
 
 func loadEnvFile() error {
