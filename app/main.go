@@ -1,20 +1,23 @@
 package main
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 
 	"github.com/joho/godotenv"
 )
 
-const maxFileSizeForUploadImage int64 = 10 * 1024 * 1024 // 10 MB
-// TODO: I want to move this to a utils directory but where should I move this?
+const maxFileSizeInMegabytes int64 = 10
+const maxFileSizeForUploadImage int64 = maxFileSizeInMegabytes * 1024 * 1024 // 10 MB
+// TODO: utilsディレクトリに移動した方がいいか検討中
 type CompressionQuality int
 const (
     LosslessCompression CompressionQuality = 100
@@ -24,99 +27,83 @@ const (
 	SignificantCompression CompressionQuality = 60
 	ExtremeCompression CompressionQuality = 10
 )
+type CompressResponse struct {
+    Message        string `json:"message"`
+    FileName       string `json:"fileName"`
+    Base64Image    string `json:"base64Image"`
+    OriginalSize   int64  `json:"originalSize"`
+    CompressedSize int64  `json:"compressedSize"`
+}
+
+func handleErrorResponse(w http.ResponseWriter, response *CompressResponse, message string, statusCode int) {
+    response.Message = message
+    log.Println(message)
+    w.WriteHeader(statusCode)
+}
 func compressImageHandler(w http.ResponseWriter, r *http.Request) {
-    log.Println("compressImageHandler")
+    response := CompressResponse{}
+    w.Header().Set("Content-Type", "application/json")
+    defer func() {
+        json.NewEncoder(w).Encode(response)
+    }()
+        
     authHeader := r.Header.Get("Authorization")
     token := strings.TrimPrefix(authHeader, "Bearer ")
     if authHeader == "" {
-        http.Error(w, "Missing Authorization header", http.StatusUnauthorized)
+		handleErrorResponse(w, &response, "Missing Authorization header", http.StatusUnauthorized)
         return
     }
     if !strings.HasPrefix(authHeader, "Bearer ") {
-        http.Error(w, "Invalid Authorization header format", http.StatusUnauthorized)
+		handleErrorResponse(w, &response, "Invalid Authorization header format", http.StatusBadRequest)
         return
     }
     if token != os.Getenv("API_BEARER_TOKEN") {
-        http.Error(w, "Invalid Token Authorization", http.StatusUnauthorized)
+		handleErrorResponse(w, &response, "Invalid Token Authorization", http.StatusUnauthorized)
         return 
     }
 	if r.Method != http.MethodPost {
-        // TODO: 成功と失敗の時にJSONを返却するように修正
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
-		return
-	}
-	err := r.ParseMultipartForm(maxFileSizeForUploadImage)
-	if err != nil {
-        // TODO: 成功と失敗の時にJSONを返却するように修正
-		http.Error(w, "Error parsing form", http.StatusBadRequest)
+		handleErrorResponse(w, &response, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	file, handler, err := r.FormFile("image")
+    if handler.Size > maxFileSizeForUploadImage {
+        handleErrorResponse(w, &response, fmt.Sprintf("File size exceeds maximum limit of %d MB", maxFileSizeInMegabytes), http.StatusBadRequest)
+        return
+    }
 	if err != nil {
-        // TODO: 成功と失敗の時にJSONを返却するように修正
-		http.Error(w, "Error retrieving the file", http.StatusBadRequest)
+		handleErrorResponse(w, &response, "Error retrieving the file", http.StatusBadRequest)
 		return
 	}
 	defer file.Close()
-	tempDir := "./tmp"
-	os.MkdirAll(tempDir, os.ModePerm)
-
-	// TODO: レースコンディションになってるっぽい。複数のユーザが同じファイル名のファイルが渡されたらバグりそう
-	originalPath := filepath.Join(tempDir, "original_"+handler.Filename)
-	compressedPath := filepath.Join(tempDir, "compressed_"+handler.Filename)
-	originalFile, err := os.Create(originalPath)
-	if err != nil {
-        // TODO: 成功と失敗の時にJSONを返却するように修正
-		http.Error(w, "Error creating original file", http.StatusInternalServerError)
-		return
-	}
-	defer originalFile.Close()
-    _, err = io.Copy(originalFile, file)
-	if err != nil {
-        // TODO: 成功と失敗の時にJSONを返却するように修正
-		http.Error(w, "Error saving original file", http.StatusInternalServerError)
-		return
-	}
-	cmd := exec.Command("magick", 
-		originalPath,
-		"-quality", fmt.Sprint(SignificantCompression),  // compression quality (0-100, lower is more compressed)
-		compressedPath,
-	)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-        // TODO: 成功と失敗の時にJSONを返却するように修正
-		log.Printf("Compression error: %v, Output: %s", err, string(output))
-		http.Error(w, "Error compressing image", http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "image/"+filepath.Ext(handler.Filename)[1:])
-	w.Header().Set("Content-Disposition", "attachment; filename="+filepath.Base(compressedPath))
-	compressedFile, err := os.Open(compressedPath)
-	if err != nil {
-        // TODO: 成功と失敗の時にJSONを返却するように修正
-		http.Error(w, "Error reading compressed file", http.StatusInternalServerError)
-		return
-	}
-	defer compressedFile.Close()
-	defer os.Remove(originalPath)
-	defer os.Remove(compressedPath)
-    // 圧縮された画像をレスポンスにコピー
-	_, err = io.Copy(w, compressedFile)
-	if err != nil {
-		log.Printf("Error serving compressed file: %v", err)
-	}
+    originalBuffer := bytes.NewBuffer(nil)
+    tee := io.TeeReader(file, originalBuffer)
+    compressedBuffer := bytes.NewBuffer(nil)
+    cmd := exec.Command("magick", 
+        "-",
+        "-quality", fmt.Sprint(SignificantCompression),
+        "-",
+    )
+    cmd.Stdin = tee
+    cmd.Stdout = compressedBuffer
+    if err := cmd.Run(); err != nil {
+        handleErrorResponse(w, &response, "Error compressing image", http.StatusInternalServerError)
+        return
+    }
+    response.Base64Image = "data:image/jpeg;base64,"+base64.StdEncoding.EncodeToString(compressedBuffer.Bytes())
+    response.OriginalSize = int64(originalBuffer.Len())
+    response.CompressedSize = int64(compressedBuffer.Len())
+    response.FileName = handler.Filename
+    response.Message = "Image compressed successfully"
 }
-
 func loadEnvFile() {
     err := godotenv.Load(".env")
     if err != nil {
         log.Fatal("Error loading .env file")
     }
 }
-
 func main() {
     loadEnvFile()
-	http.HandleFunc("/compress", compressImageHandler)
+	http.HandleFunc("/v1/compress", compressImageHandler)
 	// tmpディレクトリ存在を確認
 	os.MkdirAll("./tmp", os.ModePerm)
 	log.Println("Server starting on :8080")
