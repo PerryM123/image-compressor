@@ -35,11 +35,9 @@ type CompressResponse struct {
     OriginalSize   int64  `json:"originalSize"`
     CompressedSize int64  `json:"compressedSize"`
 }
-
 type HealthCheckResponse struct {
     Alive        bool `json:"alive"`
 }
-
 func handleErrorResponse(w http.ResponseWriter, response *CompressResponse, message string, statusCode int) {
     response.Message = message
     log.Println(message)
