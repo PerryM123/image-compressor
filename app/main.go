@@ -99,6 +99,12 @@ func compressImageHandler(w http.ResponseWriter, r *http.Request) {
     response.FileName = handler.Filename
     response.Message = "Image compressed successfully"
 }
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+    w.WriteHeader(http.StatusOK)
+    w.Header().Set("Content-Type", "application/json")
+    io.WriteString(w, `{"alive": true}`)
+}
+
 func loadEnvFile() error {
     err := godotenv.Load(".env")
     if err != nil {
@@ -116,6 +122,7 @@ func main() {
         log.Fatalf("Failed to load environment: %v", errLoadFile)
     }
 	http.HandleFunc("/v1/compress", compressImageHandler)
+	http.HandleFunc("/health-check", healthCheckHandler)
 	log.Println("Server starting on :8080")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
