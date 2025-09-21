@@ -17,6 +17,7 @@ import (
 
 const maxFileSizeInMegabytes int64 = 10
 const maxFileSizeForUploadImage int64 = maxFileSizeInMegabytes * 1024 * 1024 // 10 MB
+var bearerTokenFromEnvFile = ""
 // TODO: utilsディレクトリに移動した方がいいか検討中
 type CompressionQuality int
 const (
@@ -46,9 +47,8 @@ func compressImageHandler(w http.ResponseWriter, r *http.Request) {
     defer func() {
         json.NewEncoder(w).Encode(response)
     }()
-        
     authHeader := r.Header.Get("Authorization")
-    token := strings.TrimPrefix(authHeader, "Bearer ")
+    tokenFromRequest := strings.TrimPrefix(authHeader, "Bearer ")
     if authHeader == "" {
 		handleErrorResponse(w, &response, "Missing Authorization header", http.StatusUnauthorized)
         return
@@ -57,15 +57,19 @@ func compressImageHandler(w http.ResponseWriter, r *http.Request) {
 		handleErrorResponse(w, &response, "Invalid Authorization header format", http.StatusBadRequest)
         return
     }
-    if token != os.Getenv("API_BEARER_TOKEN") {
+    if tokenFromRequest != bearerTokenFromEnvFile {
 		handleErrorResponse(w, &response, "Invalid Token Authorization", http.StatusUnauthorized)
-        return 
+        return
     }
 	if r.Method != http.MethodPost {
 		handleErrorResponse(w, &response, "Method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
 	file, handler, err := r.FormFile("image")
+    if handler == nil {
+        handleErrorResponse(w, &response, "The image file is missing", http.StatusBadRequest)
+        return
+    }
     if handler.Size > maxFileSizeForUploadImage {
         handleErrorResponse(w, &response, fmt.Sprintf("File size exceeds maximum limit of %d MB", maxFileSizeInMegabytes), http.StatusBadRequest)
         return
@@ -95,17 +99,23 @@ func compressImageHandler(w http.ResponseWriter, r *http.Request) {
     response.FileName = handler.Filename
     response.Message = "Image compressed successfully"
 }
-func loadEnvFile() {
+func loadEnvFile() error {
     err := godotenv.Load(".env")
     if err != nil {
-        log.Fatal("Error loading .env file")
+        return fmt.Errorf("error loading .env file")
     }
+    bearerTokenFromEnvFile = os.Getenv("API_BEARER_TOKEN")
+    if bearerTokenFromEnvFile == "" {
+        return fmt.Errorf("API_BEARER_TOKEN env is empty")
+    }
+    return nil
 }
 func main() {
-    loadEnvFile()
+    errLoadFile := loadEnvFile()
+    if errLoadFile != nil {
+        log.Fatalf("Failed to load environment: %v", errLoadFile)
+    }
 	http.HandleFunc("/v1/compress", compressImageHandler)
-	// tmpディレクトリ存在を確認
-	os.MkdirAll("./tmp", os.ModePerm)
 	log.Println("Server starting on :8080")
 	err := http.ListenAndServe(":8080", nil)
 	if err != nil {
